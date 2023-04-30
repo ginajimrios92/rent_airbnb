@@ -36,6 +36,7 @@ plot(build_sh)
 
 #Bajar datos de airbns y configurarlos en la misma proyección que edificios
 airbnbs <- readRDS(files$airbnbs)
+airbnbs2 <- unique(airbnbs$geometry)
 airbnbs <- st_as_sf(airbnbs, coords = c("latitude", "longitude"), crs = 28992, agr = "constant")
 
 st_crs(airbnbs) = st_crs(build_sh)
@@ -55,6 +56,7 @@ geom_sf(aes(color = build))+
 labs(title="Rate of calls about homeless people\n in each Zipcode")+
   tema
 
+write.csv(aver, here("grafs/src/base_airbnbs.csv"))
 
 
 plot(aver)

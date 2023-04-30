@@ -7,32 +7,46 @@
 library(pacman)
 p_load(jsonlite, tidyverse, httr, here, sf, janitor)
 
-files <- list(directorio = "/Users/georginajimenez92/Documents/inputs-datos/who_owns/",
-              airbnbs = "/Users/georginajimenez92/Documents/inputs-datos/airbnbs.csv",
-              shape = here("/Users/georginajimenez92/Documents/inputs-datos/shape_files/ZIP_CODE_040114.shp"))
-
-dir <- dir(files$directorio)
-
-#Import data 
-data <- data.frame()
-
-for (i in 1:9) {
-     tempo <- read.csv(paste0(files$directorio,dir[i]))
-     tempo$lastsaleacrisid <- as.character(tempo$lastsaleacrisid)
-     data <- bind_rows(data, tempo)
-     rm(tempo)
-}
-
-data <- unique(data)
-saveRDS(data, here("import-clean/out/buildings.rds"))
-
-data <- read.csv(files$airbnbs)
-saveRDS(data, here("import-clean/out/airbnbs.rds"))
-
-#Configure map
-mapa <- sf::st_read(here("shape_files/ZIP_CODE_040114.shp"))%>%
-        clean_names()
+files <- list(rs_units = "/Users/georginajimenez92/Documents/inputs-datos/rent_airbnb/rent_stabilized2021.csv",
+              coordenadas = "/Users/georginajimenez92/Documents/inputs-datos/rent_airbnb/coordenadas.csv",
+              airbnbs = "/Users/georginajimenez92/Documents/inputs-datos/rent_airbnb/airbnbs.csv")
 
 
+#1. Pegar datos de units con coordenadas y hacer el dato espacial
+buildings <- read.csv(files$rs_units)%>%
+             select(ucbbl, uc2019, uc2021)%>%
+             mutate(dif= uc2021-uc2019,
+                    perdio=ifelse(dif<0, 1, 0))
+coordenadas <- read.csv(files$coordenadas)%>%
+               select(borough, ucbbl, lon, lat)
+buildings <- left_join(buildings, coordenadas)%>%
+             filter(!is.na(lon))
+rs_los <- filter(buildings, perdio==1)%>%
+          select(ucbbl, lon, lat)
+buildings <- st_as_sf(buildings, coords = c("lat", "lon"), crs = 28992, 
+                      agr = "constant")
+
+rs_los <- st_as_sf(rs_los, coords = c("lat", "lon"), crs = 28992, 
+                      agr = "constant")
+rs_los <- st_buffer(rs_los, .0005)
+plot(rs_los)
+
+#2. Hacer datos de airbnbs espaciales
+airbnbs <- read.csv(files$airbnbs)
+airbnbs <- st_as_sf(airbnbs, coords = c("latitude", "longitude"), crs = 28992, 
+                    agr = "constant")
+st_crs(airbnbs) = st_crs(rs_los)
+
+#3. Pegar ambos y ver cuáles se intersectan
+buff = lengths(st_intersects(airbnbs, rs_los)) > 0
+sum(buff) #Al parecer hay 5840 Airbnbs en edificios donde se han perdido rent stabilized apartments
+
+airbnbs <- mutate(airbnbs, rs_unit=buff)
+aver <- filter(airbnbs, rs_unit==T)
+
+saveRDS(airbnbs, here("import-clean/out/airbnbs.rds"))
+saveRDS(buildings, here("import-clean/out/buildings.rds"))
+saveRDS(rs_los, here("import-clean/out/rent_lost.rds"))
+write.csv(aver, here("import-clean/out/base_airbnbs.csv"))
 
         
