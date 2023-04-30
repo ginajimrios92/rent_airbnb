@@ -1,7 +1,7 @@
 #
 # Author: Gina Jiménez
 # --------------------------------------------------
-# diarreas/descriptives/src/theme.r
+#  rent_airbnb/grafs/src/theme.r
 #
 
 if(!require(pacman))install.packages("pacman")
@@ -22,11 +22,12 @@ tema <- theme_bw() +
   )
 
 save <- function(name){
-  ggsave(paste0(here("graphs/"), name, ".png"), width = 6, height = 8)
+  ggsave(paste0(here("grafs/out"), name, ".png"), width = 6, height = 8)
 }
 
+palette <- c("#3a405a", "#ec058e", "#62BBC1", "#faa916")
 
-caption <- "Source: Air Quality Mexico City http://www.aire.cdmx.gob.mx/"
-
+caption1 <- "Source: Dataset Rent Stabilized Buildings https://github.com/nycdb/nycdb/wiki/Dataset:-Rent-Stabilized-Buildings"
+caption2 <- "Source: Inside Airbnb data http://insideairbnb.com/get-the-data/"
 
 # done.
